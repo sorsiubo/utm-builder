@@ -489,7 +489,7 @@ function renderPreview(){
   const checks = $("#checks"); checks.replaceChildren();
   const add = (cls, t) => checks.append(el("li",cls,t));
   if (r.error) add("bad", r.error);
-  if (r.missing.length) add("warn", "Still needed: " + r.missing.join(", ") + ".");
+  if (r.missing.length && filled) add("warn", "Still needed: " + r.missing.join(", ") + ".");
   r.warns.forEach(w => add("warn", w));
   if (saved) add("", `Saved to the log as ID ${saved.id}. Copying again won't create a new entry.`);
   else if (r.ready && !r.warns.length) add("", "Ready. Copying either URL saves it to the log as ID " + r.fields.id + ".");
@@ -786,11 +786,7 @@ $("#btn-ai-stop").onclick = () => aiCtl && aiCtl.abort();
 /* ---------- start ---------- */
 fillCodeSelects();
 setv("f-date", todayISO());
-// Example from the Excel sample so the first view shows a working UTM. Clear form to start fresh.
-setv("f-desc", "Example: Ready to Sell tool email");
-setv("f-wf", "EN0084");
-setv("f-url", "https://www.protective.com/for-professionals/tools-and-resources/ready-to-sell-tool");
-setv("f-source", "Eloqua"); setv("f-medium", "email");
+// The form opens blank, dated today, with the default content codes.
 renderSettings();
 renderLibrary();
 
