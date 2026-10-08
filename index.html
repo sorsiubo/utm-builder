@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<!-- Test copy of utm-builder.html for GitHub Pages. Outside claude.ai the log is saved in each browser only. -->
+<title>UTM Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench. Builder form left (project → destination → source/medium → content code), outputs right; shared library below. */
+:root{
+  /* brand: #4C12A1 buttons, #EAEAEA UI */
+  --paper:#EAEAEA; --surface:#FFFFFF; --sunk:#F4F4F5; --ink:#1C1A22; --muted:#5E5B66; --line:#D3D2D6;
+  --accent:#4C12A1; --accent-ink:#FFFFFF; --accent-soft:#EFE8FA; --btn:#4C12A1; --btn-ink:#FFFFFF;
+  --p-source:#B4471C; --p-medium:#0F6E6A; --p-campaign:#4C12A1; --p-content:#1D5FA8; --p-term:#8A6A00;
+  --warn:#9A5B00; --bad:#B42318; --ok:#1E7A45;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#151417; --surface:#1F1E23; --sunk:#18171B; --ink:#ECEAF0; --muted:#A3A0AB; --line:#36343C;
+    --accent:#BC9EF2; --accent-ink:#1A0A33; --accent-soft:#2B2140; --btn:#4C12A1; --btn-ink:#FFFFFF;
+    --p-source:#F08A5D; --p-medium:#5FC9C0; --p-campaign:#BC9EF2; --p-content:#7DB4F2; --p-term:#E2C25A;
+    --warn:#E9B45A; --bad:#F2857A; --ok:#6FD39B;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#151417; --surface:#1F1E23; --sunk:#18171B; --ink:#ECEAF0; --muted:#A3A0AB; --line:#36343C;
+  --accent:#BC9EF2; --accent-ink:#1A0A33; --accent-soft:#2B2140; --btn:#4C12A1; --btn-ink:#FFFFFF;
+  --p-source:#F08A5D; --p-medium:#5FC9C0; --p-campaign:#BC9EF2; --p-content:#7DB4F2; --p-term:#E2C25A;
+  --warn:#E9B45A; --bad:#F2857A; --ok:#6FD39B;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);padding:0 20px}
+.wrap{max-width:1220px;margin:0 auto;padding-block:28px 64px;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:30px;font-weight:700}
+h2{font-size:19px;font-weight:700}
+h3{font-size:15px;font-weight:700}
+.eyebrow{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+header p{margin:4px 0 0;color:var(--muted);max-width:66ch}
+.store-pill{font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.store-pill b{color:var(--ink);font-weight:600}
+
+.bench{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:920px){.bench{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;display:flex;flex-direction:column;gap:20px}
+.sticky{position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}
+@media (max-width:920px){.sticky{position:static}}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.group{display:flex;flex-direction:column;gap:12px;padding-top:18px;border-top:1px solid var(--line)}
+.group-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 12.5px/1 var(--body);padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip span{color:var(--muted);font-family:var(--mono);font-size:11px;margin-left:4px}
+
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fields.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:1100px){.fields.five{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.fields,.fields.five{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.full{grid-column:1/-1}
+label{font-weight:600;font-size:13.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+label .key{font:500 11.5px var(--mono);color:var(--muted)}
+label .req{font-size:11px;color:var(--muted);font-weight:500}
+.swatch{width:9px;height:9px;border-radius:2px;flex:none}
+.hint{font-size:12.5px;color:var(--muted)}
+input[type=text],input[type=url],input[type=search],input[type=date],input[type=number],textarea,select{
+  font:15px/1.4 var(--body);color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+select{font-size:14px;padding:8px 8px}
+textarea{resize:vertical;min-height:70px}
+input:focus,textarea:focus,select:focus,button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input.missing{border-color:var(--warn)}
+
+/* content code strip */
+.code-strip{display:flex;flex-wrap:wrap;gap:4px;font-family:var(--mono)}
+.seg-cell{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 9px;border-radius:6px;background:var(--sunk);border:1px solid var(--line);min-width:44px}
+.seg-cell b{font-size:15px;font-weight:500;color:var(--p-content)}
+.seg-cell small{font:600 10px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.seg-cell.pending b{color:var(--muted)}
+
+.btn{font:600 14px/1 var(--body);padding:11px 16px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
+.btn.primary:hover{filter:brightness(1.15)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn.sm{font-size:12.5px;padding:7px 10px}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+.out{display:flex;flex-direction:column;gap:8px}
+.out-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.link-box{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:13px/1.6 var(--mono);word-break:break-all;min-height:60px}
+.link-box .sep,.link-box .other{color:var(--muted)}
+.link-box .k{opacity:.7}
+.c-source{color:var(--p-source)} .c-medium{color:var(--p-medium)} .c-campaign{color:var(--p-campaign)} .c-content{color:var(--p-content)} .c-term{color:var(--p-term)}
+.bg-source{background:var(--p-source)} .bg-medium{background:var(--p-medium)} .bg-campaign{background:var(--p-campaign)} .bg-content{background:var(--p-content)}
+.link-box.empty{font-family:var(--body);color:var(--muted)}
+
+.checks{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none;font-size:13.5px}
+.checks li{display:flex;gap:8px;align-items:flex-start}
+.checks li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;margin-top:7px;background:var(--ok)}
+.checks li.warn::before{background:var(--warn)}
+.checks li.bad::before{background:var(--bad)}
+
+.ai{border-top:1px solid var(--line);padding-top:18px;display:flex;flex-direction:column;gap:10px}
+.ai-out{font-size:13.5px;color:var(--muted)}
+.ai-out.err{color:var(--bad)}
+
+/* Library */
+.lib-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.lib-tools input{flex:1 1 240px;width:auto}
+.lib-tools select{width:auto;flex:0 1 auto;max-width:100%}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:13.5px}
+th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:600;padding:10px 12px;background:var(--sunk);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td .camp{font-weight:600}
+td .sub{color:var(--muted);font-size:12.5px}
+td .url{font:12px/1.5 var(--mono);color:var(--muted);word-break:break-all;max-width:340px}
+td .mono{font-family:var(--mono);font-size:12.5px}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td.acts{text-align:right}
+td.acts .row{justify-content:flex-end;gap:4px;flex-wrap:nowrap}
+.empty-lib{padding:36px 20px;text-align:center;color:var(--muted)}
+.empty-lib strong{display:block;color:var(--ink);font-family:var(--display);font-size:17px;margin-bottom:4px}
+.lib-foot{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+details.settings{border-top:1px solid var(--line);padding-top:16px}
+details.settings summary{cursor:pointer;font-weight:600;font-size:14px}
+.settings-body{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;margin-top:16px}
+@media (max-width:760px){.settings-body{grid-template-columns:1fr}}
+.vals{display:flex;flex-direction:column;gap:10px}
+.vals .row input{flex:1 1 120px;width:auto}
+.custom-list{display:flex;flex-wrap:wrap;gap:6px;font-size:12.5px}
+.custom-list span{display:inline-flex;gap:6px;align-items:center;padding:4px 4px 4px 9px;border:1px solid var(--line);border-radius:999px;background:var(--sunk)}
+.custom-list button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 6px}
+
+.notice{margin:0;padding:12px 14px;border-radius:8px;background:var(--accent-soft);color:var(--ink);font-size:13.5px}
+input:disabled,select:disabled{opacity:.6;cursor:not-allowed}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Protective Life | Digital Marketing</div>
+      <h1>UTM Builder</h1>
+      <p>Build tracking and Eloqua UTM links, generate the utm_content code, and save every UTM to a shared log with sequential IDs.</p>
+    </div>
+    <span class="store-pill" id="store-pill">Connecting to library…</span>
+  </header>
+
+  <div class="bench">
+    <section class="panel" aria-labelledby="h-build">
+      <div class="panel-head">
+        <h2 id="h-build">New UTM</h2>
+        <button class="btn sm ghost" id="btn-clear" type="button">Clear form</button>
+      </div>
+
+      <div class="fields">
+        <div class="field full">
+          <label for="f-desc">Description <span class="key">utm_description</span> <span class="req">required</span></label>
+          <input type="text" id="f-desc" placeholder="Workfront project name, copied from WF">
+        </div>
+        <div class="field">
+          <label for="f-wf"><span class="swatch bg-campaign"></span>Workfront code <span class="key">utm_campaign</span> <span class="req">required</span></label>
+          <input type="text" id="f-wf" list="dl-wf" placeholder="EN0084" autocomplete="off">
+          <span class="hint">WF campaign → Campaign details → Marketing | Program → unique campaign code (Admin only).</span>
+        </div>
+        <div class="field">
+          <label for="f-date">Entry date <span class="req">required</span></label>
+          <input type="date" id="f-date">
+          <span class="hint">Becomes the date part of utm_content.</span>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="field">
+          <label for="f-url">Landing page <span class="req">required</span></label>
+          <input type="url" id="f-url" placeholder="https://www.protective.com/…" autocomplete="off">
+          <span class="hint">If the URL has an anchor (#section), it's moved to the end of the UTM automatically.</span>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-head">
+          <h3>Source &amp; medium</h3>
+          <span class="hint">Source is specific, medium is broad.</span>
+        </div>
+        <div class="presets" id="presets"></div>
+        <div class="fields">
+          <div class="field">
+            <label for="f-source"><span class="swatch bg-source"></span>Source <span class="key">utm_source</span> <span class="req">required</span></label>
+            <input type="text" id="f-source" list="dl-source" placeholder="Eloqua, direct_mail, Costco">
+          </div>
+          <div class="field">
+            <label for="f-medium"><span class="swatch bg-medium"></span>Medium <span class="key">utm_medium</span> <span class="req">required</span></label>
+            <input type="text" id="f-medium" list="dl-medium" placeholder="email, print, display">
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-head">
+          <h3>Content code</h3>
+          <span class="hint">NA is fine when unsure.</span>
+        </div>
+        <div class="fields five">
+          <div class="field"><label for="f-lob">LOB</label><select id="f-lob"></select></div>
+          <div class="field"><label for="f-product">Product</label><select id="f-product"></select></div>
+          <div class="field"><label for="f-audience">Audience</label><select id="f-audience"></select></div>
+          <div class="field"><label for="f-creative">Creative</label><select id="f-creative"></select></div>
+          <div class="field"><label for="f-placement">Placement</label><select id="f-placement"></select></div>
+        </div>
+        <div>
+          <div class="eyebrow" style="margin-bottom:6px"><span class="swatch bg-content" style="display:inline-block;margin-right:6px"></span>utm_content</div>
+          <div class="code-strip" id="code-strip" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel sticky" aria-labelledby="h-result">
+      <div class="panel-head">
+        <h2 id="h-result">Output</h2>
+        <span class="hint" id="id-note"></span>
+      </div>
+
+      <div class="out">
+        <div class="out-head"><h3>utm_tracking_url</h3><span class="hint">Use for every UTM except Eloqua emails</span></div>
+        <div class="link-box" id="box-track"></div>
+        <div class="row"><button class="btn primary sm" id="btn-copy-track" type="button">Copy tracking URL</button><span class="hint">Copying saves both URLs to the log</span></div>
+      </div>
+      <div class="out">
+        <div class="out-head"><h3>eloqua_utm</h3><span class="hint">Only for links inside an Eloqua email</span></div>
+        <div class="link-box" id="box-eloqua"></div>
+        <div class="row"><button class="btn sm" id="btn-copy-eloqua" type="button">Copy Eloqua URL</button></div>
+      </div>
+
+      <p class="notice" id="view-only" hidden>You have view-only access. You can look up and copy UTMs from the log below. To create new UTMs, ask the owner for Contributor access.</p>
+      <ul class="checks" id="checks"></ul>
+      <div class="row" id="save-row">
+        <button class="btn" id="btn-save" type="button">Save to log</button>
+        <button class="btn" id="btn-copy-wf" type="button">Copy for Workfront task</button>
+      </div>
+
+      <div class="ai" id="ai" hidden>
+        <div>
+          <h3 style="font-size:16px">Not sure about source, medium or codes?</h3>
+          <p class="hint" style="margin:2px 0 0">Describe the tactic and AI suggests values, using past entries in the log first.</p>
+        </div>
+        <textarea id="ai-in" placeholder="e.g. Postcard mailed to Edward Jones advisors about the Ready to Sell tool, designed in-house"></textarea>
+        <div class="row">
+          <button class="btn" id="btn-ai" type="button">Suggest values</button>
+          <button class="btn ghost sm" id="btn-ai-stop" type="button" hidden>Stop</button>
+        </div>
+        <div class="ai-out" id="ai-out" aria-live="polite"></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="h-lib">
+    <div class="panel-head">
+      <h2 id="h-lib">UTM log</h2>
+      <div class="row">
+        <button class="btn sm" id="btn-copy-sheet" type="button">Copy rows for Excel</button>
+        <button class="btn sm" id="btn-csv" type="button" hidden>Download CSV</button>
+      </div>
+    </div>
+    <div class="lib-tools">
+      <input type="search" id="lib-q" placeholder="Search description, Workfront code, source, URL or ID" aria-label="Search log">
+      <select id="lib-wf" aria-label="Filter by Workfront code"><option value="">All Workfront codes</option></select>
+      <select id="lib-medium" aria-label="Filter by medium"><option value="">All mediums</option></select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Description</th><th>Source / medium</th><th>utm_content</th><th>Tracking URL</th><th>Entry date</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody id="lib-body"></tbody>
+      </table>
+    </div>
+    <div class="lib-foot"><span id="lib-count"></span><span>Copy rows pastes in the Excel column order. Reuse loads a row into the form with a new ID.</span></div>
+
+    <details class="settings" id="settings">
+      <summary>Settings: ID numbering and dropdown values</summary>
+      <p class="hint" id="settings-lock" hidden style="margin:12px 0 0">Only Editors and the owner can change these settings.</p>
+      <div class="settings-body">
+        <div class="vals">
+          <h3>Starting ID</h3>
+          <p class="hint" style="margin:0">New UTMs get the next number after this one or after the highest ID in the log, whichever is larger. Set it to the last ID in the Excel file to continue the sequence.</p>
+          <div class="row">
+            <input type="number" id="s-start" min="0" step="1" style="width:140px" aria-label="Last ID used">
+            <button class="btn sm" id="btn-start" type="button">Save</button>
+          </div>
+        </div>
+        <div class="vals">
+          <h3>Add a dropdown value</h3>
+          <p class="hint" style="margin:0">Follow the existing pattern: a short uppercase code and a name.</p>
+          <div class="row">
+            <select id="v-field" style="width:auto" aria-label="Dropdown">
+              <option value="audience">Audience</option><option value="creative">Creative</option><option value="lob">LOB</option><option value="placement">Placement</option><option value="product">Product</option>
+            </select>
+            <input type="text" id="v-code" placeholder="Code, e.g. RB" style="max-width:130px" aria-label="Code">
+            <input type="text" id="v-label" placeholder="Name, e.g. Retirement BGA" aria-label="Name">
+            <button class="btn sm" id="btn-add-val" type="button">Add</button>
+          </div>
+          <div class="custom-list" id="custom-list"></div>
+        </div>
+      </div>
+    </details>
+  </section>
+</div>
+
+<datalist id="dl-source"></datalist>
+<datalist id="dl-medium"></datalist>
+<datalist id="dl-wf"></datalist>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const ELOQUA_TERM = '&utm_term=<span class=eloquaemail >EloquaID1</span>';
+const DEFAULT_LAST_ID = 4163;   // last ID in the sample from the Excel log
+
+/* utm_content_values tab */
+const BASE_VALUES = {
+  lob: [["AF","Affinity Partnerships"],["AN","Protective Retirement Division"],["AP","Retirement - Allstate & P&C"],["BA","Retirement BGA"],["BD","Retirement Bank/BD"],["EA","EAM Channel"],["EB","Retirement - Executive Benefits"],["ED","Retirement - Edward Jones"],["EN","Protective Enterprise Teams"],["FP","First Protective"],["LI","Protective Protection Division"],["NA","Not Available"],["PB","Protection BGA"],["PC","Protection Consourse"],["PE","ProEquities"],["PM","Protection One Co"],["PP","Protection - P&C"],["PP","Protection P&C"],["PB","Retirement BGA"],["SP","Retirement - SPWL"],["EX","example product"],["RI","RIA"],["PW","Protective Wholesale"],["EJ","Edward Jones"],["PLC","Protective Life Consumer"],["RB","Retirement BGA"],["BW","Retirement Bank Annuity & Wealth Transfer"],["CM","Comparion"]],
+  product: [["NA","Not Available"],["SI","Simplified Issue : Kasasa"],["D2","Market Defender II"],["D4","Dimensions IV Variable Annuity"],["IP","Income Portfolio PIC/PIB"],["P2","Protective Asset Builder II (PABII)"],["SP","Single Premium Whole Life (SPWL)"],["CC","PCCTerm"],["CN","Protective Classic Choice Term (NY)"],["IC","Indexed Choice UL"],["LA","Lifetime Assurance UL"],["PR","ProPayer Income Annuity NY"],["PV","Protective Velocity"],["PY","ProPayer Income Annuity"],["EX","Executive UL"],["SV","SOVUL II"],["RC","Concourse - Recruiting"],["AC","Advantage Choice UL"],["AS","Aspirations VA"],["D5","Dimensions 5 VA"],["IB","Investors Benefit Advisory VUL"]],
+  audience: [["NA","Not Available"],["KA","Kasasa"],["AL","Allstate"],["BV","BBVA"],["FA","Farmers"],["GU","Guardian"],["CO","Concourse- General"],["CM","Comparion"],["EJ","Edward Jones"],["AP","Asset Protection Division"]],
+  creative: [["NA","Not Available"],["PL","Protective Creative Team"],["TS","Team Shipyard Creative Team"],["MK","Merkle Creative Team"],["CG","Capgemini Creative Team"]],
+  placement: [["NA","Not Available"]],
+};
+const CODE_FIELDS = ["lob","product","audience","creative","placement"];
+const DEFAULTS = {lob:"NA", product:"NA", audience:"NA", creative:"PL", placement:"NA"};
+const PRESETS = [["Eloqua email","Eloqua","email"],["Direct mail","direct_mail","print"]];
+const BASE_SOURCES = ["Accent","Costco","DBS","direct_mail","Eloqua","INN","Pardot","RVDA","Signature","social_media","trade_media","Twilio","Vanity"];
+const BASE_MEDIUMS = ["email","print","display","cpc","social","paid_social","video","referral","qr"];
+const COLS = ["id","utm_description","workfront_code","entry_date","landing_page","utm_campaign","utm_source","utm_medium","lob","product","audience","creative","placement","utm_content","id_code","utm_content_code","utm_tracking_url","eloqua_utm"];
+
+let library = [];
+let lastSaved = null;
+let saving = null;
+let perm = {write:true, admin:true};   // refined from the viewer's share level at startup
+let custom = {lob:[],product:[],audience:[],creative:[],placement:[]};
+let lastIdSetting = DEFAULT_LAST_ID;
+let db = null, user = null, sample = null, downloads = null;
+let names = {};
+let pendingDelete = null;
+const holder = "h" + Math.random().toString(36).slice(2);
+
+/* ---------- helpers ---------- */
+const val = id => document.getElementById(id).value;
+const setv = (id, v) => { document.getElementById(id).value = v; };
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2600);}
+function el(tag, cls, text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+const asc = (x,y) => String(x).localeCompare(String(y), undefined, {sensitivity:"base", numeric:true});
+const uniq = a => [...new Set(a.filter(Boolean))].sort(asc);
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }catch(e){
+    const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();
+    let ok=false;try{ok=document.execCommand("copy");}catch(_){}
+    ta.remove();return ok;
+  }
+}
+function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+// Excel convention: month + day + 4-digit year, no leading zeros (10/6/2026 → 1062026)
+function dateCode(iso){ if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||"")) return ""; const [y,m,d]=iso.split("-"); return String(+m)+String(+d)+y; }
+function fmtDate(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return `${+m}/${+d}/${y}`; }
+// Dropdown items in ascending order by code, then name
+function values(field){ return [...BASE_VALUES[field], ...(custom[field]||[]).map(x=>[x.code,x.label])].sort((a,b)=>asc(a[0],b[0]) || asc(a[1],b[1])); }
+function labelFor(field, code){ const v = values(field).find(x=>x[0]===code); return v ? v[1] : code; }
+function maxId(){ return library.reduce((m,x)=>Math.max(m, +x.id||0), 0); }
+function predictedId(){ return Math.max(lastIdSetting, maxId()) + 1; }
+
+/* ---------- dropdowns ---------- */
+function fillCodeSelects(){
+  CODE_FIELDS.forEach(f=>{
+    const sel = document.getElementById("f-"+f); const cur = sel.value || DEFAULTS[f];
+    sel.replaceChildren(...values(f).map(([c,l]) => new Option(`${c}: ${l}`, c)));
+    sel.value = values(f).some(v=>v[0]===cur) ? cur : DEFAULTS[f];
+  });
+}
+
+/* ---------- build ---------- */
+function build(idOverride){
+  const r = {missing:[], warns:[], error:null};
+  const desc = val("f-desc").trim(), wf = val("f-wf").trim(), date = val("f-date");
+  const source = val("f-source").trim(), medium = val("f-medium").trim();
+  let url = val("f-url").trim();
+  if (!desc) r.missing.push("description");
+  if (!wf) r.missing.push("Workfront code");
+  if (!date) r.missing.push("entry date");
+  if (!url) r.missing.push("landing page");
+  if (!source) r.missing.push("source");
+  if (!medium) r.missing.push("medium");
+  const codes = Object.fromEntries(CODE_FIELDS.map(f=>[f, val("f-"+f) || DEFAULTS[f]]));
+  const id = idOverride || predictedId();
+  const dc = dateCode(date);
+  r.fields = {desc, wf, date, source, medium, codes, id, dateCode:dc};
+  r.contentCode = dc ? dc + CODE_FIELDS.map(f=>codes[f]).join("") + id : "";
+
+  if (url){
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) { url = "https://" + url; r.warns.push("Added https:// to the landing page."); }
+    try { const u = new URL(url); if (!u.hostname.includes(".")) throw 0; }
+    catch { r.error = "The landing page URL isn't valid. Check for typos."; }
+  }
+  if (url && !r.error){
+    const hashAt = url.indexOf("#");
+    const page = hashAt >= 0 ? url.slice(0, hashAt) : url;          // landing_page_2
+    const anchor = hashAt >= 0 ? url.slice(hashAt) : "";             // anchor
+    if (/[?&]utm_/i.test(page)) r.warns.push("The landing page already has UTM tags. Remove them so the link isn't tagged twice.");
+    const enc = v => encodeURIComponent(v);
+    r.parts = [["utm_source",enc(source),"source"],["utm_medium",enc(medium),"medium"],["utm_campaign",enc(wf),"campaign"],["utm_content",r.contentCode,"content"]];
+    r.page = page; r.anchor = anchor; r.joiner = page.includes("?") ? "&" : "?";
+    const qs = r.parts.map(([k,v])=>k+"="+v).join("&");
+    r.landing = url;
+    r.tracking = page + r.joiner + qs + anchor;
+    r.eloqua = page + r.joiner + qs + ELOQUA_TERM + anchor;
+  }
+  if (/\s/.test(source+medium+wf)) r.warns.push("Source, medium or Workfront code contains spaces. Use underscores instead.");
+  if (wf && !/^[A-Za-z]{1,4}\d{2,}$/.test(wf)) r.warns.push(`"${wf}" doesn't look like a Workfront code (e.g. EN0084). Double-check it in WF.`);
+  if (source && library.length && !library.some(x=>x.utm_source===source)){
+    const near = uniq(library.map(x=>x.utm_source)).find(s => s.toLowerCase()===source.toLowerCase() || s.toLowerCase().includes(source.toLowerCase()) || source.toLowerCase().includes(s.toLowerCase()));
+    if (near) r.warns.push(`New source "${source}". Past entries use "${near}".`);
+  }
+  if (medium && library.length && !library.some(x=>x.utm_medium===medium)){
+    const near = uniq(library.map(x=>x.utm_medium)).find(s => s.toLowerCase()===medium.toLowerCase());
+    if (near) r.warns.push(`New medium "${medium}". Past entries use "${near}".`);
+  }
+  const same = r.tracking && library.find(x => x.landing_page===r.landing && x.utm_source===source && x.utm_medium===medium && x.workfront_code===wf && x.entry_date===dc);
+  if (same) r.warns.push(`A UTM with the same page, source, medium and Workfront code was logged today (ID ${same.id}).`);
+  r.ready = !!r.tracking && !r.missing.length && !r.error;
+  return r;
+}
+
+function paint(box, r, eloqua){
+  box.replaceChildren();
+  if (!r.tracking){
+    box.classList.add("empty");
+    box.textContent = r.error || "Fill in the landing page, source, medium and Workfront code to see the link.";
+    return;
+  }
+  box.classList.remove("empty");
+  box.append(el("span",null,r.page));
+  r.parts.forEach(([k,v,c],i)=>{
+    box.append(el("span","sep", i===0 ? r.joiner : "&"));
+    const s = el("span","c-"+c); s.append(el("span","k",k+"="), document.createTextNode(v || "…")); box.append(s);
+  });
+  if (eloqua){ const s = el("span","c-term", ELOQUA_TERM); box.append(s); }
+  if (r.anchor) box.append(el("span","other", r.anchor));
+}
+
+// The form still matches the entry it last saved: show that entry's ID instead of the next one.
+function savedRecord(){
+  if (!lastSaved) return null;
+  const r = build(lastSaved.id);
+  return r.ready && r.tracking === lastSaved.utm_tracking_url && r.fields.desc === lastSaved.utm_description ? lastSaved : null;
+}
+function renderPreview(){
+  const saved = savedRecord();
+  const r = saved ? build(saved.id) : build();
+  paint($("#box-track"), r, false);
+  paint($("#box-eloqua"), r, true);
+  // content code strip
+  const strip = $("#code-strip"); strip.replaceChildren();
+  const cell = (v, lab, title, pending) => { const c = el("div","seg-cell"+(pending?" pending":"")); c.title = title||""; c.append(el("b",null,v), el("small",null,lab)); strip.append(c); };
+  cell(r.fields.dateCode || "—", "date", r.fields.date ? fmtDate(r.fields.date) : "Pick an entry date");
+  CODE_FIELDS.forEach(f => cell(r.fields.codes[f], f, labelFor(f, r.fields.codes[f])));
+  cell(String(r.fields.id), "id", saved ? "Saved to the log" : "Next ID, reserved when you copy or save", !saved);
+  $("#id-note").textContent = (saved ? "Saved as ID " : "Next ID ") + r.fields.id;
+
+  const filled = ["f-desc","f-wf","f-url","f-source","f-medium"].some(id=>val(id).trim());
+  ["f-desc","f-wf","f-url","f-source","f-medium"].forEach(id=>{ const i=document.getElementById(id); i.classList.toggle("missing", filled && !i.value.trim()); });
+
+  const checks = $("#checks"); checks.replaceChildren();
+  const add = (cls, t) => checks.append(el("li",cls,t));
+  if (r.error) add("bad", r.error);
+  if (r.missing.length) add("warn", "Still needed: " + r.missing.join(", ") + ".");
+  r.warns.forEach(w => add("warn", w));
+  if (saved) add("", `Saved to the log as ID ${saved.id}. Copying again won't create a new entry.`);
+  else if (r.ready && !r.warns.length) add("", "Ready. Copying either URL saves it to the log as ID " + r.fields.id + ".");
+  const blocked = !perm.write;
+  $("#btn-save").disabled = blocked || !r.ready || !!saved || saving;
+  $("#btn-save").textContent = saving ? "Saving…" : saved ? "Saved" : "Save to log";
+  $("#btn-copy-track").disabled = blocked || !r.ready;
+  $("#btn-copy-eloqua").disabled = blocked || !r.ready;
+  $("#btn-copy-wf").disabled = blocked || !r.ready;
+  return r;
+}
+
+/* ---------- presets ---------- */
+function renderPresets(){
+  const box = $("#presets"); box.replaceChildren();
+  const seen = new Set();
+  const addChip = (label, s, m) => {
+    const key = s+"|"+m; if (seen.has(key)) return; seen.add(key);
+    const b = el("button","chip",label); b.type="button"; b.append(el("span",null,s+" / "+m));
+    b.onclick = () => { setv("f-source", s); setv("f-medium", m); renderPreview(); };
+    box.append(b);
+  };
+  PRESETS.forEach(([l,s,m]) => addChip(l,s,m));
+  // most-used pairs from the log
+  const counts = {};
+  library.forEach(x => { if (x.utm_source && x.utm_medium){ const k = x.utm_source+"|"+x.utm_medium; counts[k]=(counts[k]||0)+1; } });
+  Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8).forEach(([k]) => { const [s,m]=k.split("|"); addChip("Used before", s, m); });
+}
+
+/* ---------- save ---------- */
+async function claimId(){
+  if (!db) return predictedId();
+  const ref = db.doc("config/counter");
+  for (let i = 0; i < 6; i++){
+    const lease = await ref.acquire({holder, ttlMs:5000});
+    if (lease.acquired){
+      const snap = await ref.get();
+      const last = snap.exists ? (+snap.data().last || 0) : 0;
+      const id = Math.max(last, lastIdSetting, maxId()) + 1;
+      if (snap.exists) await ref.update({last:id}); else await ref.set({last:id});
+      return id;
+    }
+    await sleep(300 + Math.random()*500);
+  }
+  throw {code:"busy"};
+}
+function toRecord(r, id){
+  const rr = build(id);
+  return {
+    id, utm_description: rr.fields.desc, workfront_code: rr.fields.wf, entry_date: rr.fields.dateCode, entry_date_iso: rr.fields.date,
+    landing_page: rr.landing, utm_campaign: rr.fields.wf, utm_source: rr.fields.source, utm_medium: rr.fields.medium,
+    ...rr.fields.codes, utm_content: rr.fields.dateCode, id_code: String(id), utm_content_code: rr.contentCode,
+    utm_tracking_url: rr.tracking, eloqua_utm: rr.eloqua, createdAt: Date.now(), createdBy: null,
+  };
+}
+// Saves the current form to the log once. Copy buttons call this first, so every copied UTM is logged.
+async function ensureSaved(){
+  const existing = savedRecord();
+  if (existing) return existing;
+  if (saving) return saving;
+  const r = renderPreview(); if (!r.ready) return null;
+  saving = (async () => {
+    const id = await claimId();
+    const rec = toRecord(r, id);
+    if (db){
+      rec.createdBy = user ? await user.id() : null;
+      await db.collection("links").doc("u" + id).set(rec);
+    } else { library.unshift(rec); saveLocal(); }
+    lastSaved = rec;
+    return rec;
+  })();
+  renderPreview();
+  try { return await saving; }
+  catch(e){
+    const code = e && e.code;
+    if (code === "invalid_argument") { perm.write = false; applyPerms(); }
+    toast(code === "invalid_argument" ? "You have view-only access, so this UTM wasn't saved to the log."
+        : code === "quota_exceeded" ? "The log is full. Delete old entries to save new ones."
+        : code === "busy" ? "Someone else is saving right now. Try again in a moment."
+        : "Couldn't save to the log. Try again in a moment.");
+    return null;
+  }
+  finally { saving = null; if (!db) renderLibrary(); renderPreview(); }
+}
+async function saveAndCopy(pick, what){
+  const rec = await ensureSaved();
+  if (!rec) return;
+  const ok = await copyText(pick(rec));
+  toast(ok ? `${what} copied · saved to the log as ID ${rec.id}` : `Saved as ID ${rec.id}, but copying failed. Copy it from the log below.`);
+}
+$("#btn-save").onclick = async () => { const rec = await ensureSaved(); if (rec) toast(`Saved to the log as ID ${rec.id}`); };
+$("#btn-copy-track").onclick = () => saveAndCopy(rec => rec.utm_tracking_url, "Tracking URL");
+$("#btn-copy-eloqua").onclick = () => saveAndCopy(rec => rec.eloqua_utm, "Eloqua URL");
+function wfText(rec){
+  return `${rec.utm_description} (${rec.workfront_code}) · ID ${rec.id}\n${rec.utm_source} / ${rec.utm_medium}\nTracking URL: ${rec.utm_tracking_url}\nEloqua URL: ${rec.eloqua_utm}`;
+}
+$("#btn-copy-wf").onclick = () => saveAndCopy(wfText, "Workfront task text");
+
+/* ---------- form wiring ---------- */
+document.querySelectorAll(".bench input, .bench select").forEach(i => i.addEventListener("input", renderPreview));
+$("#btn-clear").onclick = () => {
+  ["f-desc","f-wf","f-url","f-source","f-medium"].forEach(id=>setv(id,""));
+  setv("f-date", todayISO()); CODE_FIELDS.forEach(f=>setv("f-"+f, DEFAULTS[f])); lastSaved = null;
+  renderPreview(); $("#f-desc").focus();
+};
+
+/* ---------- library ---------- */
+function loadLocal(){
+  try{ library = JSON.parse(localStorage.getItem("utm-log")||"[]"); }catch{ library=[]; }
+  try{ const s = JSON.parse(localStorage.getItem("utm-settings")||"{}"); if (s.lastId) lastIdSetting = s.lastId; if (s.custom) custom = {...custom, ...s.custom}; }catch{}
+}
+function saveLocal(){ try{ localStorage.setItem("utm-log", JSON.stringify(library)); localStorage.setItem("utm-settings", JSON.stringify({lastId:lastIdSetting, custom})); }catch{} }
+function fillSelect(sel, vals, label){ const cur = sel.value; sel.replaceChildren(new Option(label,"")); vals.forEach(v=>sel.append(new Option(v,v))); sel.value = vals.includes(cur) ? cur : ""; }
+function fillDatalist(id, vals){ document.getElementById(id).replaceChildren(...vals.map(v=>{const o=document.createElement("option");o.value=v;return o;})); }
+function filtered(){
+  const q = $("#lib-q").value.trim().toLowerCase(), w=$("#lib-wf").value, m=$("#lib-medium").value;
+  return library.filter(x => (!w||x.workfront_code===w) && (!m||x.utm_medium===m) &&
+    (!q || [x.id,x.utm_description,x.workfront_code,x.utm_source,x.utm_medium,x.landing_page,x.utm_content_code].join(" ").toLowerCase().includes(q)));
+}
+async function renderLibrary(){
+  library.sort((a,b)=>(+b.id||0)-(+a.id||0));
+  fillSelect($("#lib-wf"), uniq(library.map(x=>x.workfront_code)), "All Workfront codes");
+  fillSelect($("#lib-medium"), uniq(library.map(x=>x.utm_medium)), "All mediums");
+  fillDatalist("dl-source", uniq([...BASE_SOURCES, ...library.map(x=>x.utm_source)]));
+  fillDatalist("dl-medium", uniq([...BASE_MEDIUMS, ...library.map(x=>x.utm_medium)]));
+  fillDatalist("dl-wf", uniq(library.map(x=>x.workfront_code)));
+  renderPresets();
+
+  const rows = filtered();
+  const body = $("#lib-body"); body.replaceChildren();
+  const emptyRow = nodes => { const td = el("td","empty-lib"); td.colSpan = 7; td.append(...nodes); const tr=el("tr"); tr.append(td); body.append(tr); };
+  if (!library.length) emptyRow([el("strong",null,"No UTMs logged yet"), document.createTextNode("Fill in the form and choose Save to log. Each saved UTM gets the next ID and shows up here for the whole team.")]);
+  else if (!rows.length) emptyRow([document.createTextNode("No UTMs match these filters.")]);
+
+  rows.forEach(x => {
+    const tr = el("tr");
+    const c0 = el("td","num mono", String(x.id));
+    const c1 = el("td"); c1.append(el("div","camp",x.utm_description), el("div","sub mono",x.workfront_code));
+    const c2 = el("td"); const p = el("div","mono"); p.append(el("span","c-source",x.utm_source), document.createTextNode(" / "), el("span","c-medium",x.utm_medium)); c2.append(p);
+    const c3 = el("td"); const cc = el("div","mono c-content",x.utm_content_code);
+    cc.title = CODE_FIELDS.map(f=>`${f}: ${x[f]} (${labelFor(f,x[f])})`).join("\n"); c3.append(cc);
+    const c4 = el("td"); c4.append(el("div","url",x.utm_tracking_url));
+    const c5 = el("td","num"); c5.append(el("div",null,fmtDate(x.entry_date_iso)));
+    if (x.createdBy){ const who = el("div","sub who"); who.dataset.uid = x.createdBy; who.textContent = names[x.createdBy] || ""; c5.append(who); }
+    const c6 = el("td","acts"); const r = el("div","row");
+    const b1 = el("button","btn sm","Copy"); b1.type="button"; b1.title="Copy tracking URL"; b1.onclick = async()=>toast(await copyText(x.utm_tracking_url) ? `Tracking URL for ID ${x.id} copied` : "Copy failed.");
+    const b2 = el("button","btn sm","Eloqua"); b2.type="button"; b2.title="Copy Eloqua URL"; b2.onclick = async()=>toast(await copyText(x.eloqua_utm) ? `Eloqua URL for ID ${x.id} copied` : "Copy failed.");
+    const b3 = el("button","btn sm","Reuse"); b3.type="button"; b3.onclick = ()=>reuse(x);
+    r.append(b1,b2);
+    if (perm.write) r.append(b3);
+    if (perm.admin){ const b4 = el("button","btn sm ghost danger", pendingDelete===x.id ? "Confirm" : "Delete"); b4.type="button"; b4.onclick = ()=>del(x); r.append(b4); }
+    c6.append(r);
+    tr.append(c0,c1,c2,c3,c4,c5,c6); body.append(tr);
+  });
+  $("#lib-count").textContent = library.length ? `${rows.length} of ${library.length} UTM${library.length===1?"":"s"}` : "";
+  renderPreview();
+
+  if (user){
+    const ids = uniq(rows.map(x=>x.createdBy));
+    if (ids.length){
+      const ps = await user.profiles(ids);
+      ids.forEach(id => names[id] = ps[id] && ps[id].name ? "by " + ps[id].name : "");
+      document.querySelectorAll(".who").forEach(w => w.textContent = names[w.dataset.uid] || "");
+    }
+  }
+}
+["#lib-q","#lib-wf","#lib-medium"].forEach(s => $(s).addEventListener("input", renderLibrary));
+
+function reuse(x){
+  setv("f-desc", x.utm_description||""); setv("f-wf", x.workfront_code||""); setv("f-date", todayISO());
+  setv("f-url", x.landing_page||""); setv("f-source", x.utm_source||""); setv("f-medium", x.utm_medium||"");
+  CODE_FIELDS.forEach(f => setv("f-"+f, x[f] || DEFAULTS[f]));
+  lastSaved = null; renderPreview();
+  window.scrollTo({top:0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+  toast(`Loaded ID ${x.id}. Saving creates a new ID dated today.`);
+}
+async function del(x){
+  if (pendingDelete !== x.id){
+    pendingDelete = x.id; renderLibrary();
+    clearTimeout(del._t); del._t = setTimeout(()=>{ pendingDelete=null; renderLibrary(); }, 4000);
+    return;
+  }
+  pendingDelete = null; clearTimeout(del._t);
+  try{
+    if (db) await db.collection("links").doc(x._docId).delete();
+    else { library = library.filter(y=>y.id!==x.id); saveLocal(); renderLibrary(); }
+    toast(`Deleted ID ${x.id}. The ID number is not reused.`);
+  }catch(e){ toast(e && e.code==="invalid_argument" ? "You have view-only access, so you can't delete entries." : "Couldn't delete. Try again."); }
+}
+
+/* ---------- export ---------- */
+function rowValues(x){ return COLS.map(c => c==="id" ? String(x.id) : String(x[c] ?? "")); }
+$("#btn-copy-sheet").onclick = async () => {
+  const rows = filtered().slice().reverse(); if (!rows.length) return toast("Nothing to copy yet.");
+  const tsv = rows.map(x => rowValues(x).map(v=>v.replace(/[\t\n]/g," ")).join("\t")).join("\n");
+  toast(await copyText(tsv) ? `Copied ${rows.length} row${rows.length===1?"":"s"} in Excel column order (no header).` : "Copy failed.");
+};
+$("#btn-csv").onclick = async () => {
+  const rows = filtered().slice().reverse(); if (!rows.length) return toast("Nothing to export yet.");
+  const q = v => `"${String(v).replace(/"/g,'""')}"`;
+  const csv = [COLS.join(","), ...rows.map(x=>rowValues(x).map(q).join(","))].join("\r\n");
+  try{ await downloads.save({filename:`utm-log-${todayISO()}.csv`, data:"﻿"+csv}); }
+  catch(e){ if (e && e.code === "bad_request") toast("Download didn't start."); }
+};
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  setv("s-start", lastIdSetting);
+  const box = $("#custom-list"); box.replaceChildren();
+  CODE_FIELDS.forEach(f => (custom[f]||[]).forEach((v,i) => {
+    const s = el("span",null,`${f}: ${v.code} · ${v.label}`);
+    const b = el("button",null,"×"); b.type="button"; b.setAttribute("aria-label",`Remove ${v.code} from ${f}`);
+    b.onclick = () => { custom[f] = custom[f].filter((_,j)=>j!==i); saveSettings("Value removed"); };
+    b.hidden = !perm.admin; s.append(b); box.append(s);
+  }));
+  if (!box.children.length) box.append(el("span","hint","Values you add appear here, next to the ones from the Excel values tab."));
+}
+async function saveSettings(msg){
+  try{
+    if (db) await db.doc("config/settings").set({lastId:lastIdSetting, custom});
+    else saveLocal();
+    toast(msg); fillCodeSelects(); renderSettings(); renderPreview();
+  }catch(e){ toast(e && e.code==="invalid_argument" ? "Only Editors and the owner can change settings." : "Couldn't save settings."); }
+}
+$("#btn-start").onclick = () => {
+  const n = Math.floor(+val("s-start"));
+  if (!(n >= 0)) return toast("Enter a whole number.");
+  lastIdSetting = n; saveSettings(`Next new UTM gets ID ${predictedId()}`);
+};
+$("#btn-add-val").onclick = () => {
+  const f = val("v-field"), code = val("v-code").trim().toUpperCase(), label = val("v-label").trim();
+  if (!/^[A-Z0-9]{1,4}$/.test(code)) return toast("Use a short code of 1 to 4 letters or numbers.");
+  if (!label) return toast("Add a name for the value.");
+  if (values(f).some(v=>v[0]===code && v[1].toLowerCase()===label.toLowerCase())) return toast("That value already exists.");
+  if (values(f).some(v=>v[0]===code)) toast(`Note: ${code} is already used in ${f}.`);
+  custom[f] = [...(custom[f]||[]), {code, label}];
+  setv("v-code",""); setv("v-label","");
+  saveSettings(`Added ${code} to ${f}`);
+};
+
+/* ---------- access ---------- */
+// Contributors and up save UTMs; Editors and the owner delete entries and change Settings.
+function applyPerms(){
+  $("#view-only").hidden = perm.write;
+  $("#save-row").hidden = !perm.write;
+  if (!perm.write) $("#ai").hidden = true;
+  $("#settings-lock").hidden = perm.admin;
+  ["s-start","btn-start","v-field","v-code","v-label","btn-add-val"].forEach(id => document.getElementById(id).disabled = !perm.admin);
+  renderSettings();
+  renderLibrary();
+}
+
+/* ---------- AI assist ---------- */
+let aiCtl = null;
+$("#btn-ai").onclick = async () => {
+  const brief = $("#ai-in").value.trim(); const out = $("#ai-out");
+  if (!brief){ out.className="ai-out err"; out.textContent="Describe the tactic first."; return; }
+  const pairs = uniq(library.map(x=>x.utm_source+" / "+x.utm_medium)).slice(0,80).join("; ") || "(none yet)";
+  const list = f => values(f).map(([c,l])=>`${c}=${l}`).join("; ");
+  const prompt = `You help a life insurance marketing team (Protective) fill in a UTM builder.
+utm_source is specific (examples: Eloqua for Eloqua emails, direct_mail for mail, Costco, Pardot, trade_media, social_media). utm_medium is broad (email, print, display, social, cpc, video, referral). Print covers mail and flyers. Prefer a source/medium pair already used in past entries when it fits; keep their exact spelling and case.
+Past source / medium pairs: ${pairs}
+Codes (use NA when unclear; creative is PL when Protective's own team creates it; placement is always NA):
+lob: ${list("lob")}
+product: ${list("product")}
+audience: ${list("audience")}
+creative: ${list("creative")}
+placement: ${list("placement")}
+
+Tactic description:
+${brief.slice(0,2000)}
+
+Reply with only a JSON object: {"utm_source":string,"utm_medium":string,"lob":code,"product":code,"audience":code,"creative":code,"placement":code,"why":string}. "why" is one short sentence.`;
+  aiCtl = new AbortController();
+  $("#btn-ai").disabled = true; $("#btn-ai-stop").hidden = false;
+  out.className="ai-out"; out.textContent = "Thinking…";
+  try{
+    const r = await sample.json(prompt, {signal: aiCtl.signal, modelTier:"quick"});
+    if (!r || typeof r !== "object") throw {code:"invalid_json"};
+    if (typeof r.utm_source === "string" && r.utm_source) setv("f-source", r.utm_source);
+    if (typeof r.utm_medium === "string" && r.utm_medium) setv("f-medium", r.utm_medium);
+    CODE_FIELDS.forEach(f => { if (values(f).some(v=>v[0]===r[f])) setv("f-"+f, r[f]); });
+    renderPreview();
+    out.textContent = "Filled in source, medium and codes. " + (typeof r.why==="string" ? r.why + " " : "") + "Check them before saving.";
+  }catch(e){
+    const code = e && e.code;
+    if (code === "cancelled") out.textContent = "";
+    else if (["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(code)) $("#ai").hidden = true;
+    else { out.className="ai-out err"; out.textContent = code==="rate_limited" ? "Too many requests right now. Try again in a minute." : code==="invalid_json" ? "The suggestion came back in the wrong format. Try again." : "Couldn't get a suggestion. Try again."; }
+  }finally{ $("#btn-ai").disabled = false; $("#btn-ai-stop").hidden = true; }
+};
+$("#btn-ai-stop").onclick = () => aiCtl && aiCtl.abort();
+
+/* ---------- start ---------- */
+fillCodeSelects();
+setv("f-date", todayISO());
+// Example from the Excel sample so the first view shows a working UTM. Clear form to start fresh.
+setv("f-desc", "Example: Ready to Sell tool email");
+setv("f-wf", "EN0084");
+setv("f-url", "https://www.protective.com/for-professionals/tools-and-resources/ready-to-sell-tool");
+setv("f-source", "Eloqua"); setv("f-medium", "email");
+renderSettings();
+renderLibrary();
+
+function startLocal(){
+  loadLocal();
+  $("#store-pill").innerHTML = "<b>This browser only</b> · entries are saved on this device";
+  fillCodeSelects(); renderSettings(); renderLibrary();
+}
+(async () => {
+  const c = window.claude;
+  if (!c || !c.use){ startLocal(); return; }
+  const [d, u, s, dl] = await Promise.all(["db","user","sample","downloads"].map(n => c.use(n).catch(()=>null)));
+  user = u; sample = s; downloads = dl;
+  if (user){
+    const [w, ed, own] = await Promise.all([user.can("data.write"), user.canEdit(), user.isOwner()]);
+    perm = {write: w !== false, admin: !!(ed || own)};
+  }
+  if (sample && perm.write) $("#ai").hidden = false;
+  if (downloads) $("#btn-csv").hidden = false;
+  if (!d){ startLocal(); return; }
+  db = d;
+  applyPerms();
+  $("#store-pill").innerHTML = "<b>Shared log</b> · visible to everyone with access";
+  db.doc("config/settings").onSnapshot(snap => {
+    const s = snap.exists ? snap.data() : {};
+    lastIdSetting = Number.isFinite(+s.lastId) && s.lastId !== undefined ? +s.lastId : DEFAULT_LAST_ID;
+    custom = {lob:[],product:[],audience:[],creative:[],placement:[], ...(s.custom||{})};
+    fillCodeSelects(); renderSettings(); renderPreview();
+  }, () => {});
+  db.collection("links").orderBy("createdAt","desc").limit(1000).onSnapshot(snap => {
+    library = snap.docs.map(doc => ({...doc.data(), _docId: doc.id}));
+    renderLibrary();
+  }, () => toast("Lost connection to the log. Reload the page."));
+})();
+})();
+</script>
+
+</html>
